@@ -1,0 +1,9 @@
+livekit
+livekit-agents[openai]
+livekit-plugins-openai
+python-dotenv
+langchain
+langchain-openai
+langchain-community
+chromadb
+pypdf
