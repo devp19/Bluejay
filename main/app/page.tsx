@@ -3,7 +3,7 @@
 
 import Image from "next/image";
 import { IconCalendar, IconStack2, IconInfoCircle } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { LiaGithub } from "react-icons/lia";
 import { FaLink, FaLinkedin } from "react-icons/fa6";
@@ -13,13 +13,26 @@ import {
   AnnouncementTag,
   AnnouncementTitle,
 } from "@/components/ui/kibo-ui/announcement";
-import { ArrowUpRightIcon } from "lucide-react";
+import { ArrowUpRightIcon, Mic, MicOff, Phone, PhoneOff, Radio, Loader2, X } from "lucide-react";
+import {
+  LiveKitRoom,
+  useVoiceAssistant,
+  RoomAudioRenderer,
+  useRoomContext,
+} from '@livekit/components-react';
+import { RoomEvent, TranscriptionSegment } from 'livekit-client';
 
 export default function F1EngineerPage() {
   const [exiting, setExiting] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [lightMode, setLightMode] = useState(false);
   const [activeSection, setActiveSection] = useState('introduction');
+  const [showCallModal, setShowCallModal] = useState(false);
+  const [connectionDetails, setConnectionDetails] = useState<{
+    url: string;
+    token: string;
+  } | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
 
   const sections = [
     { id: 'introduction', label: 'Introduction' },
@@ -102,6 +115,42 @@ export default function F1EngineerPage() {
     setTimeout(() => {
       router.push("/innovation");
     }, 200);
+  };
+
+  const handleStartCall = async () => {
+    setIsConnecting(true);
+    try {
+      const roomName = `f1-engineer-${Math.random().toString(36).substring(7)}`;
+      const participantName = `User-${Math.random().toString(36).substring(7)}`;
+
+      const response = await fetch(
+        `/api/token?roomName=${roomName}&participantName=${participantName}`
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to get token');
+      }
+
+      const data = await response.json();
+      const url = process.env.NEXT_PUBLIC_LIVEKIT_URL;
+
+      if (!url) {
+        throw new Error('LiveKit URL not configured');
+      }
+
+      setConnectionDetails({ url, token: data.token });
+      setShowCallModal(true);
+    } catch (error) {
+      console.error('Connection error:', error);
+      alert('Failed to connect. Check console for details.');
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleEndCall = () => {
+    setConnectionDetails(null);
+    setShowCallModal(false);
   };
 
   const smoothScrollToSection = (sectionId: string) => {
@@ -275,15 +324,15 @@ export default function F1EngineerPage() {
             <div className="flex-1 w-full max-w-3xl p-1" style={{ overflowX: "hidden" }}>
           
           <p style={{ fontSize: "0.6rem", color: fadedText }}>
-              December 2024
+              October 5th, 2025
               </p>
 
             <header className="space-y-4 mt-3">
                             <h1 style={{ fontSize: "1.8rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                Adrian – F1 Race Engineer AI 🏎️
-                <a href="https://github.com/yourusername/f1-engineer" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+                Adrian – F1 Race Engineer Voice Agent
+                {/* <a href="https://github.com/yourusername/f1-engineer" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
                   <LiaGithub size={20} color={textColor} />
-                </a>
+                </a> */}
 
               </h1>
 
@@ -293,7 +342,7 @@ export default function F1EngineerPage() {
               </p>
 
               <div className="flex flex-col gap-2 sm:flex-row sm:gap-x-2 sm:gap-y-0">
-  <Announcement style={{ border: "1px solid #3a3a3a" }}>
+  <Announcement style={{ border: "1px solid #3a3a3a", background: "#111111" }}>
     <AnnouncementTag>LiveKit</AnnouncementTag>
     <AnnouncementTitle>
       Voice AI
@@ -301,7 +350,7 @@ export default function F1EngineerPage() {
     </AnnouncementTitle>
   </Announcement>
 
-  <Announcement style={{ border: "1px solid #3a3a3a" }}>
+  <Announcement style={{ border: "1px solid #3a3a3a", background: "#111111" }}>
     <AnnouncementTag>RAG</AnnouncementTag>
     <AnnouncementTitle>
       FIA Regulations
@@ -314,7 +363,7 @@ export default function F1EngineerPage() {
             </header>
 
             <div className="mt-8 rounded-2xl" style={{ background: "#111111"}}>
-              <img src="/f1-hero.png" className="w-full h-auto aspect-video object-cover rounded-2xl"></img>
+              <img src="/f1.jpeg" className="w-full h-auto aspect-video object-cover rounded-2xl"></img>
             </div>
 
             <nav className="mt-10 lg:hidden">
@@ -420,7 +469,7 @@ This approach gives Adrian access to the entire FIA rulebook without needing to 
    <br></br>
    <br></br>
 
-   <img src="/rag-diagram.png" className="w-full aspect-video rounded-2xl"></img>
+   <img src="/f1reg.png" className="w-full aspect-video rounded-2xl"></img>
    <br></br>
    <br></br>
    
@@ -442,7 +491,7 @@ This approach gives Adrian access to the entire FIA rulebook without needing to 
   <p style={{ color: fadedText, fontSize: "0.9rem" }}>
 
  <br></br>
-<br></br>
+
 <span className="text-white font-mono bg-white/10 px-1 rounded">STT (Speech-to-Text)</span> - Converts user speech to text using OpenAI's Whisper model. This runs in real-time with sub-second latency.
 <br></br>
 <br></br>
@@ -493,15 +542,42 @@ Try it yourself by clicking the button below to start a conversation with Adrian
 
 </p>              
 
-                    <video
-  src="/f1-demo.mp4"
-  className="w-full aspect-video rounded-2xl mt-6"
-  autoPlay
-  loop
-  muted
-  playsInline
-></video>    
+<button
+  onClick={handleStartCall}
+  disabled={isConnecting}
+  className="mt-20 px-8 py-4 rounded-xl font-regular text-lg transition-all duration-300 flex items-center gap-3 mx-auto"
+  style={{
+    background: isConnecting ? '#666' : 'linear-gradient(to right,rgb(255, 255, 255),rgb(255, 255, 255))',
+    color: 'white',
+    border: 'none',
+    cursor: isConnecting ? 'not-allowed' : 'pointer',
+    opacity: isConnecting ? 0.7 : 1,
+  }}
+  onMouseOver={(e) => {
+    if (!isConnecting) {
+      e.currentTarget.style.transform = 'translateY(-2px)';
+      e.currentTarget.style.boxShadow = '0 10px 25px rgba(255, 255, 255, 0.3)';
+    }
+  }}
+  onMouseOut={(e) => {
+    e.currentTarget.style.transform = 'translateY(0)';
+    e.currentTarget.style.boxShadow = 'none';
+  }}
+>
+  {isConnecting ? (
+    <>
+      <Loader2 className="w-5 h-5 animate-spin" />
+      Connecting...
+    </>
+  ) : (
+    <>
+      <Phone className="w-5 h-5 text-black" />
+      <span style={{ color: "black" }}>Start Call with Adrian</span>
+    </>
+  )}
+</button>
 
+                  
 </section>
 
 
@@ -547,6 +623,226 @@ Try it yourself by clicking the button below to start a conversation with Adrian
           </div>
         </div>
       </div>
+
+      {/* Call Modal */}
+      {showCallModal && connectionDetails && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(8px)' }}
+        >
+          <div 
+            className="relative w-full max-w-2xl rounded-2xl overflow-hidden"
+            style={{ background: bgColor, border: '1px solid #3a3a3a' }}
+          >
+            <LiveKitRoom
+              serverUrl={connectionDetails.url}
+              token={connectionDetails.token}
+              onDisconnected={handleEndCall}
+            >
+              <CallInterface onDisconnect={handleEndCall} bgColor={bgColor} textColor={textColor} fadedText={fadedText} />
+            </LiveKitRoom>
+          </div>
+        </div>
+      )}
     </>
+  );
+}
+
+function CallInterface({ onDisconnect, bgColor, textColor, fadedText }: { 
+  onDisconnect: () => void;
+  bgColor: string;
+  textColor: string;
+  fadedText: string;
+}) {
+  const { state, audioTrack } = useVoiceAssistant();
+  const room = useRoomContext();
+  const [messages, setMessages] = useState<
+    Array<{ role: 'user' | 'assistant'; content: string; timestamp: Date }>
+  >([]);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  // Listen for transcriptions
+  useEffect(() => {
+    if (!room) return;
+
+    const handleTranscription = (
+      segments: TranscriptionSegment[],
+      participant?: any
+    ) => {
+      segments.forEach((segment) => {
+        if (segment.final && segment.text.trim()) {
+          const isAssistant = participant?.identity?.includes('agent') || 
+                             participant?.name?.includes('Adrian') ||
+                             !participant;
+          
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: isAssistant ? 'assistant' : 'user',
+              content: segment.text,
+              timestamp: new Date(),
+            },
+          ]);
+        }
+      });
+    };
+
+    room.on(RoomEvent.TranscriptionReceived, handleTranscription);
+
+    return () => {
+      room.off(RoomEvent.TranscriptionReceived, handleTranscription);
+    };
+  }, [room]);
+
+  const getStateInfo = () => {
+    switch (state) {
+      case 'listening':
+        return { icon: Mic, text: 'Listening', color: '#10b981' };
+      case 'thinking':
+        return { icon: Loader2, text: 'Thinking', color: '#f59e0b', spin: true };
+      case 'speaking':
+        return { icon: Radio, text: 'Speaking', color: '#3b82f6' };
+      default:
+        return { icon: MicOff, text: 'Idle', color: '#6b7280' };
+    }
+  };
+
+  const stateInfo = getStateInfo();
+  const StateIcon = stateInfo.icon;
+
+  return (
+    <div className="flex flex-col h-[600px]">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: '#3a3a3a' }}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-700 rounded-xl flex items-center justify-center">
+            <span className="text-xl">🏎️</span>
+          </div>
+          <div>
+            <h2 className="font-semibold" style={{ color: textColor }}>Adrian</h2>
+            <div className="flex items-center gap-2">
+              <div 
+                className="w-2 h-2 rounded-full animate-pulse"
+                style={{ background: stateInfo.color }}
+              />
+              <span className="text-xs" style={{ color: fadedText }}>{stateInfo.text}</span>
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={onDisconnect}
+          className="p-2 rounded-lg transition-colors"
+          style={{ background: '#fff', color: 'black' }}
+          onMouseOver={(e) => (e.currentTarget.style.background = '#fff')}
+          onMouseOut={(e) => (e.currentTarget.style.background = '#fff')}
+        >
+          <PhoneOff className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Messages */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center space-y-3">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto" style={{ background: '#1f1f1f' }}>
+                <Mic className="w-8 h-8" style={{ color: fadedText }} />
+              </div>
+              <p style={{ color: fadedText }}>
+                Start speaking to begin your conversation with Adrian
+              </p>
+            </div>
+          </div>
+        ) : (
+          messages.map((message, index) => (
+            <div
+              key={index}
+              className={`flex gap-3 ${
+                message.role === 'user' ? 'justify-end' : 'justify-start'
+              }`}
+            >
+              {message.role === 'assistant' && (
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center flex-shrink-0">
+                  <span className="text-sm">🏎️</span>
+                </div>
+              )}
+
+              <div
+                className={`flex flex-col gap-1 max-w-[80%] ${
+                  message.role === 'user' ? 'items-end' : 'items-start'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium" style={{ color: textColor }}>
+                    {message.role === 'assistant' ? 'Adrian' : 'You'}
+                  </span>
+                  <span className="text-xs" style={{ color: fadedText }}>
+                    {message.timestamp.toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </span>
+                </div>
+
+                <div
+                  className="rounded-2xl px-4 py-2"
+                  style={{
+                    background: message.role === 'user' ? '#dc2626' : '#1f1f1f',
+                    color: textColor,
+                  }}
+                >
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                    {message.content}
+                  </p>
+                </div>
+              </div>
+
+              {message.role === 'user' && (
+                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: '#dc2626' }}>
+                  <span className="text-sm">👤</span>
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Status Bar */}
+      <div className="border-t p-3" style={{ borderColor: '#3a3a3a', background: '#0a0a0a' }}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div 
+              className="px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1"
+              style={{ background: '#1f1f1f', color: textColor }}
+            >
+              <StateIcon className={`w-3 h-3 ${stateInfo.spin ? 'animate-spin' : ''}`} />
+              {stateInfo.text}
+            </div>
+            {audioTrack && (
+              <div 
+                className="px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1"
+                style={{ background: '#1f1f1f', color: textColor }}
+              >
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                Connected
+              </div>
+            )}
+          </div>
+          <p className="text-xs" style={{ color: fadedText }}>
+            Speak naturally • Adrian is listening
+          </p>
+        </div>
+      </div>
+
+      <RoomAudioRenderer />
+    </div>
   );
 }
