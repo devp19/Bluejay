@@ -19,6 +19,7 @@ import {
   useVoiceAssistant,
   RoomAudioRenderer,
   useRoomContext,
+  VoiceAssistantControlBar,
 } from '@livekit/components-react';
 import { RoomEvent, TranscriptionSegment } from 'livekit-client';
 
@@ -638,6 +639,8 @@ Try it yourself by clicking the button below to start a conversation with Adrian
               serverUrl={connectionDetails.url}
               token={connectionDetails.token}
               onDisconnected={handleEndCall}
+              audio={true}
+              video={false}
             >
               <CallInterface onDisconnect={handleEndCall} bgColor={bgColor} textColor={textColor} fadedText={fadedText} />
             </LiveKitRoom>
@@ -654,12 +657,29 @@ function CallInterface({ onDisconnect, bgColor, textColor, fadedText }: {
   textColor: string;
   fadedText: string;
 }) {
-  const { state, audioTrack } = useVoiceAssistant();
+  const { state, audioTrack, agent } = useVoiceAssistant();
   const room = useRoomContext();
   const [messages, setMessages] = useState<
     Array<{ role: 'user' | 'assistant'; content: string; timestamp: Date }>
   >([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Enable microphone when component mounts
+  useEffect(() => {
+    const enableMicrophone = async () => {
+      if (room) {
+        try {
+          console.log('Requesting microphone access...');
+          await room.localParticipant.setMicrophoneEnabled(true);
+          console.log('Microphone enabled successfully');
+        } catch (error) {
+          console.error('Failed to enable microphone:', error);
+        }
+      }
+    };
+    
+    enableMicrophone();
+  }, [room]);
 
   // Auto-scroll to bottom
   useEffect(() => {

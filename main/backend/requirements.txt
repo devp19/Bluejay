@@ -1,10 +1,7 @@
-livekit
-livekit-agents[openai]
-livekit-plugins-openai
+livekit-agents[openai,silero]
 python-dotenv
 langchain
 langchain-openai
 langchain-community
 chromadb
 pypdf
-openai

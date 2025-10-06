@@ -3,7 +3,6 @@ F1 Race Engineer - LiveKit Agent Entry Point
 Initializes RAG pipeline and starts the voice agent
 """
 
-import asyncio
 import logging
 from dotenv import load_dotenv
 from livekit import agents
@@ -36,7 +35,6 @@ except Exception as e:
     logger.error(f"Expected location: backend/data/fia2026.pdf")
     raise
 
-
 async def entrypoint(ctx: JobContext):
     """
     Main entry point for the LiveKit agent.
@@ -64,7 +62,6 @@ async def entrypoint(ctx: JobContext):
     except Exception as e:
         logger.error(f"Error running voice agent: {e}")
         raise
-
 
 if __name__ == "__main__":
     logger.info("Starting LiveKit worker...")
